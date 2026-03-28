@@ -1,0 +1,1313 @@
+1. START
+
+2. IMPORT csv
+3. IMPORT inspect
+4. IMPORT os
+5. IMPORT statistics
+6. IMPORT sys
+7. IMPORT textwrap
+
+8. INITIALIZE BANNER with the multiline banner string
+
+9. DEFINE FUNCTION clear_console
+    EXECUTE os.system("cls") IF os.name IS "nt", OTHERWISE EXECUTE os.system("clear")
+    PRINT BANNER
+    PRINT blank line
+10. END FUNCTION
+
+11. DEFINE FUNCTION pause
+    INPUT "\nPress Enter to continue..."
+    CALL clear_console
+12. END FUNCTION
+
+13. DEFINE FUNCTION exit_program
+    PRINT "\nExiting program. Goodbye!"
+    CALL sys.exit
+14. END FUNCTION
+
+15. DEFINE FUNCTION get_choice WITH PARAMETER valid_choices
+    WHILE True
+        INPUT choice
+        SET choice TO stripped input
+        IF choice IS IN valid_choices THEN
+            CALL clear_console
+            RETURN choice
+        ENDIF
+        PRINT "Invalid choice. Please try again."
+    END WHILE
+16. END FUNCTION
+
+17. DEFINE FUNCTION get_int WITH PARAMETER prompt
+    WHILE True
+        TRY
+            RETURN integer value of stripped INPUT(prompt)
+        CATCH ValueError
+            PRINT "Invalid input. Please enter a whole number."
+        END TRY
+    END WHILE
+18. END FUNCTION
+
+19. DEFINE FUNCTION view_function_code WITH PARAMETERS function_obj, title
+    CALL clear_console
+    TRY
+        SET source_lines TO inspect.getsource(function_obj).splitlines()
+    CATCH OSError OR TypeError
+        SET source_lines TO list containing "Unable to display the source code for this item."
+    END TRY
+    CALL render_content_screen WITH
+        title_lines = ["Code Preview: " + title]
+        content_lines = source_lines
+        epilogue_lines = ["Press Enter to continue."]
+    CALL pause
+20. END FUNCTION
+
+21. DEFINE FUNCTION review_quiz_attempt WITH PARAMETERS quiz_title, review_items, score, total_questions
+    WHILE True
+        CALL render_menu_screen WITH
+            title_lines = [quiz_title, "Quiz Review"]
+            prologue_lines = ["Score: " + score + "/" + total_questions, "Review each question, your answer, and the correct answer below."]
+            option_lines = review_items
+            epilogue_lines = ["1 - Return to quiz menu"]
+        SET choice TO CALL get_choice(["1"])
+        IF choice IS "1" THEN
+            RETURN
+        ENDIF
+    END WHILE
+22. END FUNCTION
+
+23. DEFINE FUNCTION run_quiz WITH PARAMETERS quiz_title, questions
+    PRINT quiz_title
+    INITIALIZE letters TO ["A", "B", "C", "D"]
+    INITIALIZE score TO 0
+    INITIALIZE review_items TO empty list
+
+    FOR EACH item IN questions WITH number STARTING AT 1
+        UNPACK item INTO question, choices, answer
+        PRINT "\n" + number + ". " + question
+
+        FOR EACH choice IN choices WITH i STARTING AT 0
+            PRINT "   " + letters[i] + ". " + choice
+        END FOR
+
+        INPUT user_answer
+        CONVERT user_answer TO stripped uppercase value
+
+        WHILE user_answer IS NOT IN letters
+            PRINT "Please enter A, B, C, or D only."
+            INPUT user_answer
+            CONVERT user_answer TO stripped uppercase value
+        END WHILE
+
+        IF user_answer IS EQUAL TO answer THEN
+            PRINT "Correct!"
+            INCREMENT score BY 1
+            SET result_text TO "Correct"
+        ELSE
+            SET correct_index TO index of answer in letters
+            PRINT "Wrong. Correct answer: " + answer + ". " + choices[correct_index]
+            SET result_text TO "Wrong"
+        ENDIF
+
+        SET user_index TO index of user_answer in letters
+        SET correct_index TO index of answer in letters
+
+        EXTEND review_items WITH
+            number + ". " + question
+            "   Your answer: " + user_answer + ". " + choices[user_index]
+            "   Correct answer: " + answer + ". " + choices[correct_index]
+            "   Result: " + result_text
+            blank line
+    END FOR
+
+    PRINT "\nFinal score: " + score + "/" + LENGTH(questions)
+    PRINT "1. Review quiz"
+    PRINT "0. Back"
+
+    SET choice TO CALL get_choice(["1", GO_BACK_CHOICE])
+
+    IF choice IS "1" THEN
+        CALL review_quiz_attempt WITH quiz_title, review_items, score, LENGTH(questions)
+    ENDIF
+24. END FUNCTION
+
+25. INITIALIZE SELECTION_QUIZ TO the list of selection quiz tuples
+26. INITIALIZE RELATIONAL_QUIZ TO the list of relational quiz tuples
+27. INITIALIZE BOOLEAN_QUIZ TO the list of boolean quiz tuples
+
+28. INITIALIZE GO_BACK_CHOICE TO "0"
+
+29. INITIALIZE LESSON_6_1_OPTIONS TO
+    "1" : ("Topic 1 - Selection Structure", "topic1_menu")
+    "2" : ("Topic 2 - Relational Operators", "topic2_menu")
+    "3" : ("Topic 3 - Boolean Operators", "topic3_menu")
+    "4" : ("Topic 4 - if Statement", "topic4_menu")
+    "5" : ("Topic 5 - if...else Statement", "topic5_menu")
+    "6" : ("Topic 6 - if...else if...else Statement", "topic6_menu")
+    "7" : ("Topic 7 - Nested Decision", "topic7_menu")
+
+30. INITIALIZE LESSON_6_2_OPTIONS TO
+    "1" : ("Topic 1 - File Handling C.R.U.D.", "lesson_6_2_topic1_menu")
+    "2" : ("Topic 2 - Accessing .csv Files", "lesson_6_2_topic2_menu")
+
+31. INITIALIZE MAIN_MENU_OPTIONS TO
+    "1" : ("CodeChum Midterm - Lesson_6_1 (Selection Structures)", "lesson_6_1_menu")
+    "2" : ("CodeChum Semi-Finals - Lesson_6_2 (Accessing Files)", "lesson_6_2_menu")
+
+32. INITIALIZE MENU_WIDTH TO 76
+
+33. DEFINE FUNCTION _normalize_paragraphs WITH PARAMETER lines
+    INITIALIZE normalized TO empty list
+    FOR EACH line IN lines
+        IF NOT line THEN
+            APPEND "" TO normalized
+            CONTINUE
+        ENDIF
+        EXTEND normalized WITH textwrap.wrap(line, width = MENU_WIDTH - 4) OR [""]
+    END FOR
+    RETURN normalized
+34. END FUNCTION
+
+35. DEFINE FUNCTION _normalize_code_lines WITH PARAMETER lines
+    INITIALIZE normalized TO empty list
+    SET max_width TO MENU_WIDTH - 4
+
+    FOR EACH line IN lines
+        SET expanded_line TO line.expandtabs(4)
+
+        IF expanded_line IS EQUAL TO "" THEN
+            APPEND "" TO normalized
+            CONTINUE
+        ENDIF
+
+        SET indent_width TO LENGTH(expanded_line) MINUS LENGTH(expanded_line.lstrip(" "))
+        SET indent TO " " MULTIPLIED BY MINIMUM(indent_width, max_width - 1)
+        SET content TO expanded_line[indent_width:]
+        SET available_width TO MAXIMUM(1, max_width - LENGTH(indent))
+        SET wrapped_lines TO textwrap.wrap(content, width = available_width, replace_whitespace = False, drop_whitespace = False) OR [""]
+
+        APPEND indent + wrapped_lines[0] TO normalized
+
+        FOR EACH wrapped_line IN wrapped_lines FROM INDEX 1 ONWARD
+            APPEND indent + wrapped_line TO normalized
+        END FOR
+    END FOR
+
+    RETURN normalized
+36. END FUNCTION
+
+37. DEFINE FUNCTION _pad_section_lines WITH PARAMETERS lines, top_padding = 1, bottom_padding = 1
+    RETURN ([""] MULTIPLIED BY top_padding) + CALL _normalize_paragraphs(lines) + ([""] MULTIPLIED BY bottom_padding)
+38. END FUNCTION
+
+39. DEFINE FUNCTION _format_option_lines WITH PARAMETER option_lines
+    INITIALIZE spaced_lines TO empty list
+    FOR EACH line IN option_lines WITH index
+        APPEND line TO spaced_lines
+        IF line IS NOT EMPTY AND index IS NOT EQUAL TO LENGTH(option_lines) - 1 THEN
+            APPEND "" TO spaced_lines
+        ENDIF
+    END FOR
+    RETURN spaced_lines
+40. END FUNCTION
+
+41. DEFINE FUNCTION render_menu_screen WITH PARAMETERS title_lines, prologue_lines, option_lines, epilogue_lines
+    PRINT top border using "╔" + "═" * (MENU_WIDTH - 2) + "╗"
+
+    FOR EACH line IN CALL _pad_section_lines(title_lines)
+        PRINT centered line inside menu box
+    END FOR
+
+    PRINT title separator using "╠" + "═" * (MENU_WIDTH - 2) + "╣"
+
+    FOR EACH line IN CALL _pad_section_lines(prologue_lines)
+        PRINT left-justified line inside menu box
+    END FOR
+
+    PRINT section separator using "╟" + "─" * (MENU_WIDTH - 2) + "╢"
+
+    FOR EACH line IN CALL _pad_section_lines(CALL _format_option_lines(option_lines))
+        PRINT left-justified line inside menu box
+    END FOR
+
+    PRINT section separator using "╟" + "─" * (MENU_WIDTH - 2) + "╢"
+
+    FOR EACH line IN CALL _pad_section_lines(epilogue_lines)
+        PRINT left-justified line inside menu box
+    END FOR
+
+    PRINT bottom border using "╚" + "═" * (MENU_WIDTH - 2) + "╝"
+42. END FUNCTION
+
+43. DEFINE FUNCTION render_content_screen WITH PARAMETERS title_lines, content_lines, epilogue_lines
+    PRINT top border using "╔" + "═" * (MENU_WIDTH - 2) + "╗"
+
+    FOR EACH line IN CALL _pad_section_lines(title_lines)
+        PRINT centered line inside content box
+    END FOR
+
+    PRINT title separator using "╠" + "═" * (MENU_WIDTH - 2) + "╣"
+
+    FOR EACH line IN ([""] + CALL _normalize_code_lines(content_lines) + [""])
+        PRINT left-justified content line inside content box
+    END FOR
+
+    PRINT section separator using "╟" + "─" * (MENU_WIDTH - 2) + "╢"
+
+    FOR EACH line IN CALL _pad_section_lines(epilogue_lines)
+        PRINT left-justified line inside content box
+    END FOR
+
+    PRINT bottom border using "╚" + "═" * (MENU_WIDTH - 2) + "╝"
+44. END FUNCTION
+
+45. DEFINE FUNCTION show_menu WITH PARAMETERS menu_title, menu_options, back_label, drawer_path
+    SET option_lines TO a list of strings formatted as choice + " - " + label FOR EACH choice, (label, _) IN menu_options
+    APPEND GO_BACK_CHOICE + " - " + back_label TO option_lines
+    CALL render_menu_screen WITH
+        title_lines = [menu_title]
+        prologue_lines = ["Current location: " + joined drawer_path with " > ", "Choose a number from the list below, then press Enter."]
+        option_lines = option_lines
+        epilogue_lines = ["Type " + GO_BACK_CHOICE + " to " + lowercase(back_label) + "."]
+46. END FUNCTION
+
+47. DEFINE FUNCTION run_menu WITH PARAMETERS menu_title, menu_options, back_label, drawer_path = None
+    SET valid_choices TO list of menu_options keys PLUS GO_BACK_CHOICE
+    SET current_path TO drawer_path IF drawer_path EXISTS, OTHERWISE [menu_title]
+
+    WHILE True
+        CALL show_menu WITH menu_title, menu_options, back_label, current_path
+        SET choice TO CALL get_choice(valid_choices)
+
+        IF choice IS EQUAL TO GO_BACK_CHOICE THEN
+            RETURN
+        ENDIF
+
+        UNPACK menu_options[choice] INTO ignored label, function_name
+        CALL globals()[function_name]()
+    END WHILE
+48. END FUNCTION
+
+49. DEFINE FUNCTION run_activity_menu WITH PARAMETERS menu_title, activities, drawer_path = None
+    SET current_path TO drawer_path IF drawer_path EXISTS, OTHERWISE [menu_title]
+
+    WHILE True
+        SET option_lines TO list of strings formatted as i + " - " + item[0] FOR EACH i, item IN activities STARTING AT 1
+        APPEND GO_BACK_CHOICE + " - Go back" TO option_lines
+
+        CALL render_menu_screen WITH
+            title_lines = [menu_title]
+            prologue_lines = ["Current location: " + joined current_path with " > ", "Open an activity from the list below."]
+            option_lines = option_lines
+            epilogue_lines = ["Select an item number to continue."]
+
+        SET valid_choices TO list of string numbers from 1 to LENGTH(activities)
+        APPEND GO_BACK_CHOICE TO valid_choices
+
+        SET choice TO CALL get_choice(valid_choices)
+
+        IF choice IS EQUAL TO GO_BACK_CHOICE THEN
+            RETURN
+        ENDIF
+
+        SET activity_index TO INTEGER(choice) - 1
+        UNPACK activities[activity_index] INTO activity_title, activity_function
+
+        WHILE True
+            CALL render_menu_screen WITH
+                title_lines = [activity_title]
+                prologue_lines = ["Current location: " + joined current_path with " > ", "You can inspect the code first or run the activity now."]
+                option_lines = ["1 - View Code", "2 - Run Activity", GO_BACK_CHOICE + " - Go back"]
+                epilogue_lines = ["Choose how you want to continue."]
+
+            SET activity_choice TO CALL get_choice(["1", "2", GO_BACK_CHOICE])
+
+            IF activity_choice IS EQUAL TO GO_BACK_CHOICE THEN
+                BREAK
+            ENDIF
+
+            IF activity_choice IS "1" THEN
+                CALL view_function_code(activity_function, activity_title)
+                CONTINUE
+            ENDIF
+
+            CALL activity_function()
+            BREAK
+        END WHILE
+    END WHILE
+50. END FUNCTION
+
+51. DEFINE FUNCTION quiz_menu WITH PARAMETERS topic_title, quiz_title, quiz_data, drawer_path = None
+    SET current_path TO drawer_path IF drawer_path EXISTS, OTHERWISE [topic_title]
+
+    WHILE True
+        CALL render_menu_screen WITH
+            title_lines = [topic_title]
+            prologue_lines = ["Current location: " + joined current_path with " > ", quiz_title]
+            option_lines = ["1 - Take Quiz", GO_BACK_CHOICE + " - Go back"]
+            epilogue_lines = ["Start the quiz from this screen."]
+
+        SET choice TO CALL get_choice(["1", GO_BACK_CHOICE])
+
+        IF choice IS "1" THEN
+            CALL run_quiz(quiz_title, quiz_data)
+        ELSE
+            RETURN
+        ENDIF
+    END WHILE
+52. END FUNCTION
+
+53. DEFINE FUNCTION topic4_item1
+    PRINT "Topic 4 - Item 1"
+    SET x1 TO CALL get_int("Enter x: ")
+    SET x2 TO CALL get_int("Enter y: ")
+    SET x3 TO CALL get_int("Enter z: ")
+    IF x1 == x2 == x3 THEN
+        PRINT "Triangle is equilateral."
+    ELSE
+        PRINT "Condition is false."
+    ENDIF
+    CALL pause
+54. END FUNCTION
+
+55. DEFINE FUNCTION topic4_item2
+    PRINT "Topic 4 - Item 2"
+    SET x1 TO CALL get_int("Enter first number: ")
+    SET x2 TO CALL get_int("Enter second number: ")
+    IF x1 > 0 AND x2 > 0 OR x1 < 0 AND x2 < 0 THEN
+        PRINT "Numbers have the same sign."
+    ELSE
+        PRINT "Condition is false."
+    ENDIF
+    CALL pause
+56. END FUNCTION
+
+57. DEFINE FUNCTION topic4_item3
+    PRINT "Topic 4 - Item 3"
+    INPUT z
+    IF NOT z.isalnum() THEN
+        PRINT "Character is a special character."
+    ELSE
+        PRINT "Condition is false."
+    ENDIF
+    CALL pause
+58. END FUNCTION
+
+59. DEFINE FUNCTION topic4_item4
+    PRINT "Topic 4 - Item 4"
+    SET year TO CALL get_int("Enter the year: ")
+    IF year % 4 == 0 AND year % 100 != 0 OR year % 400 == 0 THEN
+        PRINT "Year is a leap year."
+    ELSE
+        PRINT "Condition is false."
+    ENDIF
+    CALL pause
+60. END FUNCTION
+
+61. DEFINE FUNCTION topic4_item5
+    PRINT "Topic 4 - Item 5"
+    SET x1 TO CALL get_int("Enter x: ")
+    SET x2 TO CALL get_int("Enter y: ")
+    IF x1 == x2 THEN
+        PRINT "Numbers are equal."
+    ELSE
+        PRINT "Condition is false."
+    ENDIF
+    CALL pause
+62. END FUNCTION
+
+63. DEFINE FUNCTION topic5_item1
+    PRINT "Topic 5 - Item 1"
+    SET by TO CALL get_int("Enter your birth year: ")
+    SET cy TO CALL get_int("Enter the current year: ")
+    SET age TO cy - by
+    IF age < 0 THEN
+        PRINT "Your age is not a perfect square."
+    ELSE
+        SET root TO age ** 0.5
+        IF root == int(root) THEN
+            PRINT "Your age is a perfect square."
+        ELSE
+            PRINT "Your age is not a perfect square."
+        ENDIF
+    ENDIF
+    CALL pause
+64. END FUNCTION
+
+65. DEFINE FUNCTION topic5_item2
+    PRINT "Topic 5 - Item 2"
+    SET x TO CALL get_int("Enter your birth month: ")
+    SET y TO CALL get_int("Enter your birth day: ")
+    IF x == 12 OR x == 1 AND y <= 19 OR y == 22 THEN
+        PRINT "Your zodiac sign is Capricorn."
+    ELSE
+        PRINT "Your zodiac sign is not Capricorn."
+    ENDIF
+    CALL pause
+66. END FUNCTION
+
+67. DEFINE FUNCTION topic5_item3
+    PRINT "Topic 5 - Item 3"
+    SET age TO CALL get_int("Enter your age: ")
+    IF age >= 18 THEN
+        PRINT "You are eligible to vote."
+    ELSE
+        PRINT "You are not eligible to vote."
+    ENDIF
+    CALL pause
+68. END FUNCTION
+
+69. DEFINE FUNCTION topic5_item4
+    PRINT "Topic 5 - Item 4"
+    INPUT char
+    IF char IS IN "aeiouAEIOU" THEN
+        PRINT "The character is a vowel."
+    ELSE
+        PRINT "The character is a consonant."
+    ENDIF
+    CALL pause
+70. END FUNCTION
+
+71. DEFINE FUNCTION topic5_item5
+    PRINT "Topic 5 - Item 5"
+    SET x1 TO CALL get_int("Enter first number: ")
+    SET x2 TO CALL get_int("Enter second number: ")
+    SET x3 TO CALL get_int("Enter third number: ")
+    IF x1 == x2 == x3 THEN
+        PRINT "All numbers are equal."
+    ELSE
+        PRINT "Not all numbers are equal."
+    ENDIF
+    CALL pause
+72. END FUNCTION
+
+73. DEFINE FUNCTION topic6_item1
+    PRINT "Topic 6 - Item 1"
+    SET x1 TO CALL get_int("Enter first number: ")
+    SET x2 TO CALL get_int("Enter second number: ")
+    SET x3 TO CALL get_int("Enter third number: ")
+
+    IF x1 >= 0 AND x2 >= 0 AND x3 >= 0 THEN
+        PRINT "All numbers are positive."
+    ELIF x1 < 0 AND x2 < 0 AND x3 < 0 THEN
+        PRINT "All numbers are negative."
+    ELIF x1 % 2 == 0 AND x2 % 2 == 0 AND x3 % 2 == 0 THEN
+        PRINT "All numbers are even."
+    ELIF x1 % 2 != 0 AND x2 % 2 != 0 AND x3 % 2 != 0 THEN
+        PRINT "All numbers are odd."
+    ELSE
+        PRINT "Numbers are different."
+    ENDIF
+
+    CALL pause
+74. END FUNCTION
+
+75. DEFINE FUNCTION topic6_item2
+    PRINT "Topic 6 - Item 2"
+    SET value TO CALL get_int("Enter an integer: ")
+    IF value % 4 == 0 THEN
+        PRINT "The number is divisible by 4."
+    ELIF value % 3 == 0 THEN
+        PRINT "The number is divisible by 3."
+    ELIF value % 2 == 0 THEN
+        PRINT "The number is divisible by 2."
+    ELSE
+        PRINT "The number is not divisible by 2, 3, or 4."
+    ENDIF
+    CALL pause
+76. END FUNCTION
+
+77. DEFINE FUNCTION topic6_item3
+    PRINT "Topic 6 - Item 3"
+    SET day TO CALL get_int("Enter day: ")
+    IF day == 1 THEN
+        PRINT "Monday"
+    ELIF day == 2 THEN
+        PRINT "Tuesday"
+    ELIF day == 3 THEN
+        PRINT "Wednesday"
+    ELIF day == 4 THEN
+        PRINT "Thursday"
+    ELIF day == 5 THEN
+        PRINT "Friday"
+    ELIF day == 6 THEN
+        PRINT "Saturday"
+    ELIF day == 7 THEN
+        PRINT "Sunday"
+    ELSE
+        PRINT "Invalid input"
+    ENDIF
+    CALL pause
+78. END FUNCTION
+
+79. DEFINE FUNCTION topic6_item4
+    PRINT "Topic 6 - Item 4"
+    SET x1 TO CALL get_int("Enter first integer: ")
+    SET x2 TO CALL get_int("Enter second integer: ")
+    SET x3 TO CALL get_int("Enter third integer: ")
+    SET x4 TO CALL get_int("Enter fourth integer: ")
+    SET x5 TO CALL get_int("Enter fifth integer: ")
+
+    INITIALIZE pc TO 0
+    INITIALIZE nc TO 0
+    INITIALIZE zc TO 0
+
+    IF x1 > 0 THEN
+        INCREMENT pc BY 1
+    ELIF x1 < 0 THEN
+        INCREMENT nc BY 1
+    ELSE
+        INCREMENT zc BY 1
+    ENDIF
+
+    IF x2 > 0 THEN
+        INCREMENT pc BY 1
+    ELIF x2 < 0 THEN
+        INCREMENT nc BY 1
+    ELSE
+        INCREMENT zc BY 1
+    ENDIF
+
+    IF x3 > 0 THEN
+        INCREMENT pc BY 1
+    ELIF x3 < 0 THEN
+        INCREMENT nc BY 1
+    ELSE
+        INCREMENT zc BY 1
+    ENDIF
+
+    IF x4 > 0 THEN
+        INCREMENT pc BY 1
+    ELIF x4 < 0 THEN
+        INCREMENT nc BY 1
+    ELSE
+        INCREMENT zc BY 1
+    ENDIF
+
+    IF x5 > 0 THEN
+        INCREMENT pc BY 1
+    ELIF x5 < 0 THEN
+        INCREMENT nc BY 1
+    ELSE
+        INCREMENT zc BY 1
+    ENDIF
+
+    PRINT "Positive count:", pc
+    PRINT "Negative count:", nc
+    PRINT "Zero count:", zc
+    CALL pause
+80. END FUNCTION
+
+81. DEFINE FUNCTION topic6_item5
+    PRINT "Topic 6 - Item 5"
+    SET year TO CALL get_int("Enter a year: ")
+    IF year % 100 == 0 THEN
+        IF year % 400 == 0 THEN
+            PRINT "It's a leap century year."
+        ELSE
+            PRINT "It's a century year."
+        ENDIF
+    ELIF year % 4 == 0 THEN
+        PRINT "It's a leap year."
+    ELSE
+        PRINT "It's neither a leap year nor a century year."
+    ENDIF
+    CALL pause
+82. END FUNCTION
+
+83. DEFINE FUNCTION topic7_item1
+    PRINT "Topic 7 - Item 1"
+    SET age TO CALL get_int("Enter your age: ")
+    INPUT genre
+    CONVERT genre TO lowercase
+
+    IF 8 <= age <= 12 THEN
+        IF genre == "a" THEN
+            PRINT "The Adventures of Tom Sawyer"
+        ELIF genre == "m" THEN
+            PRINT "Nancy Drew: The Secret of the Old Clock"
+        ELSE
+            PRINT "No recommendation available"
+        ENDIF
+    ELIF age > 12 THEN
+        IF genre == "f" THEN
+            PRINT "Harry Potter and the Sorcerer's Stone"
+        ELIF genre == "s" THEN
+            PRINT "Ender's Game"
+        ELSE
+            PRINT "No recommendation available"
+        ENDIF
+    ELSE
+        PRINT "No recommendation available"
+    ENDIF
+
+    CALL pause
+84. END FUNCTION
+
+85. DEFINE FUNCTION topic7_item2
+    PRINT "Topic 7 - Item 2"
+    SET age TO CALL get_int("Enter your age: ")
+    SET income TO CALL get_int("Enter your income: $")
+
+    IF age >= 60 AND income < 10000 THEN
+        PRINT "Eligible for senior citizen discount"
+    ENDIF
+
+    IF age >= 60 AND income >= 10000 THEN
+        PRINT "Not eligible for senior citizen discount"
+    ENDIF
+
+    IF age < 60 THEN
+        PRINT "Not eligible for senior citizen discount"
+    ENDIF
+
+    CALL pause
+86. END FUNCTION
+
+87. DEFINE FUNCTION topic7_item3
+    PRINT "Topic 7 - Item 3"
+    SET num TO CALL get_int("Enter an integer: ")
+
+    IF num % 2 != 0 AND num % 3 == 0 THEN
+        PRINT "Oddly divisible by 3"
+    ELIF num % 2 != 0 THEN
+        PRINT "Odd number"
+    ELIF num % 2 == 0 AND num % 4 == 0 THEN
+        PRINT "Evenly divisible by 4"
+    ELSE
+        PRINT "Even number"
+    ENDIF
+
+    CALL pause
+88. END FUNCTION
+
+89. DEFINE FUNCTION topic7_item4
+    PRINT "Topic 7 - Item 4"
+    SET score1 TO CALL get_int("Enter the first score: ")
+    SET score2 TO CALL get_int("Enter the second score: ")
+
+    IF score1 > score2 AND score1 > 80 THEN
+        PRINT "Excellent!"
+    ENDIF
+
+    IF score1 > score2 AND score1 < 80 THEN
+        PRINT "Good job!"
+    ENDIF
+
+    IF score1 < score2 THEN
+        PRINT "Keep up the good work!"
+    ENDIF
+
+    CALL pause
+90. END FUNCTION
+
+91. DEFINE FUNCTION topic7_item5
+    PRINT "Topic 7 - Item 5"
+    SET num TO CALL get_int("Enter an integer: ")
+    SET is_square TO int(num ** 0.5) ** 2 == num IF num >= 0, OTHERWISE False
+    SET cube_root TO round(abs(num) ** (1 / 3))
+    SET is_cube TO cube_root ** 3 == abs(num)
+
+    IF is_square AND is_cube THEN
+        PRINT "Perfect in every way"
+    ELIF is_cube AND num % 2 == 0 THEN
+        PRINT "Perfect in even cubes"
+    ELIF is_cube AND num % 2 != 0 THEN
+        PRINT "Perfect in an odd way"
+    ELSE
+        PRINT "Nothing special"
+    ENDIF
+
+    CALL pause
+92. END FUNCTION
+
+93. DEFINE FUNCTION file_item1_merge_files
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 1 - Item 1: Merge Two Text Files"
+
+    OPEN "file1.txt" IN WRITE MODE AS file1
+    WRITE sample text TO file1
+    CLOSE file1
+
+    OPEN "file2.txt" IN WRITE MODE AS file2
+    WRITE sample text TO file2
+    CLOSE file2
+
+    PRINT "Sample files created: file1.txt and file2.txt"
+
+    INPUT file_name1
+    STRIP file_name1
+
+    INPUT file_name2
+    STRIP file_name2
+
+    TRY
+        OPEN file_name1 IN READ MODE AS f1
+    CATCH FileNotFoundError
+        PRINT "Error: Could not open file " + file_name1 + "."
+        CALL pause
+        RETURN
+    END TRY
+
+    TRY
+        OPEN file_name2 IN READ MODE AS f2
+    CATCH FileNotFoundError
+        PRINT "Error: Could not open file " + file_name2 + "."
+        CLOSE f1
+        CALL pause
+        RETURN
+    END TRY
+
+    INPUT new_name
+    STRIP new_name
+
+    OPEN new_name IN WRITE MODE AS new_file
+        WRITE f1.read() TO new_file
+        WRITE f2.read() TO new_file
+    CLOSE new_file
+
+    CLOSE f1
+    CLOSE f2
+
+    PRINT "Files merged successfully."
+    CALL pause
+94. END FUNCTION
+
+95. DEFINE FUNCTION file_item2_delete_file
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 1 - Item 2: Delete a File"
+
+    FOR EACH file_name IN ["TOPIC1.txt", "TOPIC2.txt", "TOPIC3.txt"]
+        OPEN file_name IN WRITE MODE
+        CLOSE file_name
+    END FOR
+
+    PRINT "Sample files created: TOPIC1.txt, TOPIC2.txt, TOPIC3.txt"
+
+    INPUT filename
+    STRIP filename
+
+    TRY
+        CALL os.remove(filename)
+        PRINT "File " + filename + " deleted successfully."
+    CATCH FileNotFoundError
+        PRINT "Failed to delete file " + filename + "."
+    END TRY
+
+    CALL pause
+96. END FUNCTION
+
+97. DEFINE FUNCTION create_line_word_samples
+    OPEN "sample_file_1.txt" IN WRITE MODE AS file1
+        WRITE sample content with 3 lines TO file1
+    CLOSE file1
+
+    OPEN "sample_file_2.txt" IN WRITE MODE AS file2
+        WRITE sample content with 2 lines TO file2
+    CLOSE file2
+
+    OPEN "sample_file_3.txt" IN WRITE MODE AS file3
+        WRITE empty string TO file3
+    CLOSE file3
+
+    OPEN "sample_file_4.txt" IN WRITE MODE AS file4
+        WRITE sample content with extra spaces TO file4
+    CLOSE file4
+98. END FUNCTION
+
+99. DEFINE FUNCTION file_item3_count_lines
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 1 - Item 3: Count File Lines"
+    CALL create_line_word_samples
+    PRINT "Sample files created: sample_file_1.txt, sample_file_2.txt, sample_file_3.txt"
+
+    INPUT file_path
+    STRIP file_path
+
+    TRY
+        OPEN file_path IN READ MODE AS file
+            PRINT "Line count:", LENGTH(file.readlines())
+        CLOSE file
+    CATCH FileNotFoundError
+        PRINT "File not found."
+    END TRY
+
+    CALL pause
+100. END FUNCTION
+
+101. DEFINE FUNCTION file_item4_count_words
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 1 - Item 4: Count File Words"
+    CALL create_line_word_samples
+    PRINT "Sample files created: sample_file_1.txt, sample_file_2.txt, sample_file_3.txt, sample_file_4.txt"
+
+    INPUT file_path
+    STRIP file_path
+
+    TRY
+        OPEN file_path IN READ MODE AS file
+            PRINT "Word count:", LENGTH(file.read().split())
+        CLOSE file
+    CATCH FileNotFoundError
+        PRINT "File not found."
+    END TRY
+
+    CALL pause
+102. END FUNCTION
+
+103. DEFINE FUNCTION file_item5_write_names
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 1 - Item 5: Write Names to File"
+    SET count TO CALL get_int("Enter the number of names: ")
+
+    WHILE count < 0
+        PRINT "Please enter a non-negative number."
+        SET count TO CALL get_int("Enter the number of names: ")
+    END WHILE
+
+    OPEN "names.txt" IN WRITE MODE AS file
+        FOR EACH i FROM 1 TO count
+            INPUT name
+            WRITE name + newline TO file
+        END FOR
+    CLOSE file
+
+    PRINT "Names written to file successfully!"
+    CALL pause
+104. END FUNCTION
+
+105. DEFINE FUNCTION create_csv_samples_item1
+    OPEN "sample1.csv" IN WRITE MODE AS file
+        INITIALIZE writer TO csv.writer(file)
+        WRITE ["ID", "Name", "Age"]
+        WRITE [1, "John", 30]
+        WRITE [2, "Jane", 25]
+        WRITE [3, "Bob", 40]
+    CLOSE file
+
+    OPEN "sample2.csv" IN WRITE MODE AS file
+        INITIALIZE writer TO csv.writer(file)
+        WRITE ["Code", "Description"]
+        WRITE ["A001", "Product A"]
+        WRITE ["B002", "Product B"]
+        WRITE ["C003", "Product C"]
+    CLOSE file
+
+    OPEN "sample3.csv" IN WRITE MODE AS file
+        INITIALIZE writer TO csv.writer(file)
+        WRITE ["Country", "Capital"]
+        WRITE ["USA", "Washington D.C."]
+        WRITE ["Japan", "Tokyo"]
+        WRITE ["France", "Paris"]
+    CLOSE file
+106. END FUNCTION
+
+107. DEFINE FUNCTION csv_item1_update_first_row
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 2 - Item 1: Update CSV"
+    CALL create_csv_samples_item1
+    PRINT "Sample CSV files created: sample1.csv, sample2.csv, sample3.csv"
+
+    INPUT filename
+    STRIP filename
+
+    IF NOT os.path.exists(filename) THEN
+        PRINT "Error: " + filename + " not found!"
+        CALL pause
+        RETURN
+    ENDIF
+
+    INPUT new_data
+
+    TRY
+        OPEN filename IN READ MODE AS file
+            SET old_rows TO file.readlines()[1:]
+        CLOSE file
+
+        OPEN filename IN WRITE MODE AS file
+            WRITE new_data + newline TO file
+            FOR EACH row IN old_rows
+                WRITE row TO file
+            END FOR
+        CLOSE file
+
+        PRINT "Successfully updated " + filename + " with " + new_data
+    CATCH OSError
+        PRINT "Error: Unable to update file."
+    END TRY
+
+    CALL pause
+108. END FUNCTION
+
+109. DEFINE FUNCTION create_sample_csv WITH PARAMETERS filename, sample_number
+    OPEN filename IN WRITE MODE AS file
+        INITIALIZE writer TO csv.writer(file)
+        WRITE ["name", "description", "price"]
+
+        IF sample_number == 1 THEN
+            WRITE rows for Widget, Gadget, Device with duplicates
+        ELIF sample_number == 2 THEN
+            WRITE rows for Book, Pen, Notebook with duplicates
+        ELIF sample_number == 3 THEN
+            WRITE rows for Laptop, Mouse, Keyboard with duplicates
+        ELSE
+            WRITE rows for Phone, Tablet, Charger with duplicates
+        ENDIF
+    CLOSE file
+110. END FUNCTION
+
+111. DEFINE FUNCTION csv_item2_remove_duplicates
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 2 - Item 2: Remove Duplicate Products"
+
+    FOR EACH i FROM 1 TO 4
+        CALL create_sample_csv("sample" + i + ".csv", i)
+    END FOR
+
+    PRINT "Sample CSV files created: sample1.csv, sample2.csv, sample3.csv, sample4.csv"
+
+    WHILE True
+        INPUT filename
+        STRIP filename
+        IF os.path.exists(filename) THEN
+            BREAK
+        ENDIF
+        PRINT "Error: Input file does not exist."
+    END WHILE
+
+    INITIALIZE seen TO empty set
+    INITIALIZE rows TO empty list
+
+    OPEN filename IN READ MODE AS file
+        INITIALIZE reader TO csv.reader(file)
+        SET header TO next(reader)
+
+        FOR EACH row IN reader
+            IF LENGTH(row) < 2 THEN
+                CONTINUE
+            ENDIF
+
+            SET key TO (row[0], row[1])
+
+            IF key IS NOT IN seen THEN
+                ADD key TO seen
+                APPEND row TO rows
+            ENDIF
+        END FOR
+    CLOSE file
+
+    OPEN "output.csv" IN WRITE MODE AS file
+        INITIALIZE writer TO csv.writer(file)
+        WRITE header
+        WRITE all rows
+    CLOSE file
+
+    PRINT "Duplicate products removed successfully! Output saved to output.csv"
+    CALL pause
+112. END FUNCTION
+
+113. DEFINE FUNCTION create_csv_samples_item3
+    INITIALIZE file1 TO the list of rows for file1.csv
+    INITIALIZE file2 TO the list of rows for file2.csv
+    INITIALIZE file3 TO the list of rows for file3.csv
+
+    OPEN "file1.csv" IN WRITE MODE AS f1
+        WRITE all rows from file1 USING csv.writer(f1)
+    CLOSE f1
+
+    OPEN "file2.csv" IN WRITE MODE AS f2
+        WRITE all rows from file2 USING csv.writer(f2)
+    CLOSE f2
+
+    OPEN "file3.csv" IN WRITE MODE AS f3
+        WRITE all rows from file3 USING csv.writer(f3)
+    CLOSE f3
+114. END FUNCTION
+
+115. DEFINE FUNCTION is_number WITH PARAMETER value
+    TRY
+        CONVERT value TO float
+        RETURN True
+    CATCH ValueError
+        RETURN False
+    END TRY
+116. END FUNCTION
+
+117. DEFINE FUNCTION csv_item3_clean_invalid_rows
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 2 - Item 3: Clean Invalid Rows"
+    CALL create_csv_samples_item3
+    PRINT "Sample CSV files created: file1.csv, file2.csv, file3.csv"
+
+    INPUT input_file
+    STRIP input_file
+
+    INPUT output_file
+    STRIP output_file
+
+    IF NOT os.path.exists(input_file) THEN
+        PRINT "File does not exist."
+        CALL pause
+        RETURN
+    ENDIF
+
+    OPEN input_file IN READ MODE AS csvfile
+        SET rows TO list(csv.reader(csvfile))
+    CLOSE csvfile
+
+    IF NOT rows THEN
+        PRINT "Input CSV is empty."
+        CALL pause
+        RETURN
+    ENDIF
+
+    SET header TO rows[0]
+    INITIALIZE cleaned_rows TO [header]
+
+    FOR EACH row IN rows FROM INDEX 1 ONWARD
+        IF LENGTH(row) != LENGTH(header) THEN
+            CONTINUE
+        ENDIF
+
+        IF ANY cell.strip() == "" IN row THEN
+            CONTINUE
+        ENDIF
+
+        INITIALIZE valid TO True
+
+        FOR EACH i FROM 1 TO LENGTH(row) - 1
+            IF NOT CALL is_number(row[i].strip()) THEN
+                SET valid TO False
+                BREAK
+            ENDIF
+        END FOR
+
+        IF valid THEN
+            APPEND [cell.strip() FOR EACH cell IN row] TO cleaned_rows
+        ENDIF
+    END FOR
+
+    OPEN output_file IN WRITE MODE AS csvfile
+        WRITE cleaned_rows USING csv.writer(csvfile)
+    CLOSE csvfile
+
+    PRINT "Invalid rows removed successfully. Cleaned data written to " + output_file + "."
+    CALL pause
+118. END FUNCTION
+
+119. DEFINE FUNCTION csv_item4_write_people_data
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 2 - Item 4: Write People Data to data.csv"
+    SET n TO CALL get_int("Enter the number of people: ")
+
+    WHILE n < 0
+        PRINT "Please enter a non-negative number."
+        SET n TO CALL get_int("Enter the number of people: ")
+    END WHILE
+
+    OPEN "data.csv" IN WRITE MODE AS file
+        FOR EACH i FROM 1 TO n
+            PRINT "Enter data for person " + i + ":"
+            INPUT name
+            INPUT age
+            INPUT gender
+            WRITE name + "," + age + "," + gender TO file
+            IF i != n THEN
+                WRITE newline TO file
+            ENDIF
+        END FOR
+    CLOSE file
+
+    PRINT "Data written successfully to data.csv"
+    CALL pause
+120. END FUNCTION
+
+121. DEFINE FUNCTION create_csv_analysis_sample WITH PARAMETER filename
+    OPEN filename IN WRITE MODE AS file
+        INITIALIZE writer TO csv.writer(file)
+        WRITE ["id", "name", "time_taken_seconds", "score", "retakes"]
+        WRITE all 20 sample rows for Alice to Tina
+    CLOSE file
+122. END FUNCTION
+
+123. DEFINE FUNCTION analyze_csv WITH PARAMETERS filename, column_name, analysis_type
+    TRY
+        OPEN filename IN READ MODE AS file
+            INITIALIZE reader TO csv.DictReader(file)
+            INITIALIZE values TO empty list
+
+            FOR EACH row IN reader
+                APPEND float(row[column_name]) TO values
+            END FOR
+        CLOSE file
+
+        IF analysis_type IS "mean" THEN
+            SET result TO statistics.mean(values)
+        ELIF analysis_type IS "median" THEN
+            SET result TO statistics.median(values)
+        ELIF analysis_type IS "mode" THEN
+            SET result TO statistics.mode(values)
+        ELSE
+            PRINT "Invalid analysis type. Use mean, median, or mode."
+            RETURN
+        ENDIF
+
+        PRINT "The " + analysis_type + " of the " + column_name + " column is: " + result formatted to 2 decimal places
+    CATCH FileNotFoundError
+        PRINT "Error: File not found."
+    CATCH KeyError
+        PRINT "Error: Column name not found."
+    CATCH ValueError
+        PRINT "Error: Column contains non-numeric values."
+    CATCH statistics.StatisticsError
+        PRINT "Error: Could not compute mode."
+    END TRY
+124. END FUNCTION
+
+125. DEFINE FUNCTION csv_item5_analyze_csv
+    PRINT "CodeChum Semi-Finals - Lesson 6 - Topic 2 - Item 5: Analyze CSV"
+    CALL create_csv_analysis_sample("sample.csv")
+    PRINT "Sample CSV created: sample.csv"
+
+    INPUT filename
+    STRIP filename
+
+    INPUT column_name
+    STRIP column_name
+
+    INPUT analysis_type
+    CONVERT analysis_type TO stripped lowercase
+
+    CALL analyze_csv(filename, column_name, analysis_type)
+    CALL pause
+126. END FUNCTION
+
+127. DEFINE FUNCTION topic1_menu
+    CALL quiz_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 1: Selection Structure"
+        "Python Conditional Statements Quiz"
+        SELECTION_QUIZ
+        ["MAIN MENU", "Lesson 6.1", "Topic 1"]
+128. END FUNCTION
+
+129. DEFINE FUNCTION topic2_menu
+    CALL quiz_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 2: Relational Operators"
+        "Relational Operators Quiz"
+        RELATIONAL_QUIZ
+        ["MAIN MENU", "Lesson 6.1", "Topic 2"]
+130. END FUNCTION
+
+131. DEFINE FUNCTION topic3_menu
+    CALL quiz_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 3: Boolean Operators"
+        "Boolean Operators Quiz"
+        BOOLEAN_QUIZ
+        ["MAIN MENU", "Lesson 6.1", "Topic 3"]
+132. END FUNCTION
+
+133. DEFINE FUNCTION topic4_menu
+    CALL run_activity_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 4: if Statement"
+        [
+            ("Item 1: Equilateral triangle", topic4_item1),
+            ("Item 2: Same sign numbers", topic4_item2),
+            ("Item 3: Special character", topic4_item3),
+            ("Item 4: Leap year", topic4_item4),
+            ("Item 5: Numbers are equal", topic4_item5)
+        ]
+        ["MAIN MENU", "Lesson 6.1", "Topic 4"]
+134. END FUNCTION
+
+135. DEFINE FUNCTION topic5_menu
+    CALL run_activity_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 5: if...else Statement"
+        [
+            ("Item 1: Perfect square age", topic5_item1),
+            ("Item 2: Zodiac sign check", topic5_item2),
+            ("Item 3: Voting eligibility", topic5_item3),
+            ("Item 4: Vowel or consonant", topic5_item4),
+            ("Item 5: All numbers equal", topic5_item5)
+        ]
+        ["MAIN MENU", "Lesson 6.1", "Topic 5"]
+136. END FUNCTION
+
+137. DEFINE FUNCTION topic6_menu
+    CALL run_activity_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 6: if...else if...else Statement"
+        [
+            ("Item 1: Positive/negative/even/odd group", topic6_item1),
+            ("Item 2: Divisibility by 4, 3, 2", topic6_item2),
+            ("Item 3: Day number to day name", topic6_item3),
+            ("Item 4: Count positive/negative/zero", topic6_item4),
+            ("Item 5: Leap/century year", topic6_item5)
+        ]
+        ["MAIN MENU", "Lesson 6.1", "Topic 6"]
+138. END FUNCTION
+
+139. DEFINE FUNCTION topic7_menu
+    CALL run_activity_menu WITH
+        "CodeChum Midterm - Lesson 6 - Topic 7: Nested Decision"
+        [
+            ("Item 1: Book recommendation", topic7_item1),
+            ("Item 2: Senior discount eligibility", topic7_item2),
+            ("Item 3: Odd/even divisibility", topic7_item3),
+            ("Item 4: Score feedback", topic7_item4),
+            ("Item 5: Perfect square/cube check", topic7_item5)
+        ]
+        ["MAIN MENU", "Lesson 6.1", "Topic 7"]
+140. END FUNCTION
+
+141. DEFINE FUNCTION lesson_6_1_menu
+    CALL run_menu WITH
+        "CodeChum Midterm - Lesson_6_1: Selection Structures"
+        LESSON_6_1_OPTIONS
+        "Go back"
+        ["MAIN MENU", "Lesson 6.1"]
+142. END FUNCTION
+
+143. DEFINE FUNCTION lesson_6_2_topic1_menu
+    CALL run_activity_menu WITH
+        "CodeChum Semi-Finals - Lesson 6 - Topic 1: File Handling C.R.U.D."
+        [
+            ("Item 1: Merge two text files", file_item1_merge_files),
+            ("Item 2: Delete a file", file_item2_delete_file),
+            ("Item 3: Count lines in a file", file_item3_count_lines),
+            ("Item 4: Count words in a file", file_item4_count_words),
+            ("Item 5: Create names.txt from user input", file_item5_write_names)
+        ]
+        ["MAIN MENU", "Lesson 6.2", "Topic 1"]
+144. END FUNCTION
+
+145. DEFINE FUNCTION lesson_6_2_topic2_menu
+    CALL run_activity_menu WITH
+        "CodeChum Semi-Finals - Lesson 6 - Topic 2: Accessing .csv Files"
+        [
+            ("Item 1: Update CSV with new first row", csv_item1_update_first_row),
+            ("Item 2: Remove duplicate product rows", csv_item2_remove_duplicates),
+            ("Item 3: Remove invalid rows", csv_item3_clean_invalid_rows),
+            ("Item 4: Write people data to CSV", csv_item4_write_people_data),
+            ("Item 5: Analyze CSV (mean/median/mode)", csv_item5_analyze_csv)
+        ]
+        ["MAIN MENU", "Lesson 6.2", "Topic 2"]
+146. END FUNCTION
+
+147. DEFINE FUNCTION lesson_6_2_menu
+    CALL run_menu WITH
+        "CodeChum Semi-Finals - Lesson_6_2: Accessing Files"
+        LESSON_6_2_OPTIONS
+        "Go back"
+        ["MAIN MENU", "Lesson 6.2"]
+148. END FUNCTION
+
+149. DEFINE FUNCTION main_menu
+    CALL clear_console
+
+    WHILE True
+        CALL show_menu("MAIN MENU", MAIN_MENU_OPTIONS, "Exit", ["MAIN MENU"])
+        SET choice TO CALL get_choice(list of MAIN_MENU_OPTIONS keys + [GO_BACK_CHOICE])
+
+        IF choice IS EQUAL TO GO_BACK_CHOICE THEN
+            CALL exit_program
+        ENDIF
+
+        UNPACK MAIN_MENU_OPTIONS[choice] INTO ignored label, function_name
+        CALL globals()[function_name]()
+    END WHILE
+150. END FUNCTION
+
+151. IF __name__ == "__main__" THEN
+    CALL main_menu
+152. ENDIF
+
+153. END
